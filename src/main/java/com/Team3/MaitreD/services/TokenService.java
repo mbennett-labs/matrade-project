@@ -1,6 +1,9 @@
+// Generates jwt tokens
 package com.Team3.MaitreD.services;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +35,6 @@ public class TokenService {
 	      String scope = auth.getAuthorities().stream()
 	          .map(GrantedAuthority::getAuthority)
 	          .collect(Collectors.joining(" "));
-	      System.out.println("hi " + scope);
 	      JwtClaimsSet claims = JwtClaimsSet.builder()
 	          .issuer("self")
 	          .issuedAt(now)
@@ -47,5 +49,12 @@ public class TokenService {
 		Jwt decoded = jwtDecoder.decode(token);
 		String username = decoded.getSubject();
 		return username;
+	}
+
+	public List<String> getRolesFromToken(String token) {
+		Jwt decoded = jwtDecoder.decode(token);
+		String[] rolesData = decoded.getClaimAsString("roles").split(" ");
+		List<String> roles = Arrays.asList(rolesData);
+		return roles;
 	}
 }

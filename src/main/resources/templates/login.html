@@ -3,28 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spring Boot Application</title>
+    <title>Sign In</title>
+    <link rel="stylesheet" href="/css/style.css">
 </head>
-<body>
-    <h1>Spring Boot Application</h1>
-    
-    <!-- Form to enter data -->
-    <form id="dataForm">
-        <label for="username">Enter Username:</label>
-        <input type="text" id="username" name="username">
-<!--         <label for="email">Enter Email:</label> -->
-<!--         <input type="text" id="email" name="email"> -->
-        <label for="password">Enter Password:</label>
-        <input type="text" id="password" name="password">
-        <button type="submit">Submit</button>
-    </form>
+<body>    
+    <div class="header">
+        <span id="brand" class="brand">Maître d'</span>
+        <button id ="signInSignOut" button class="sign-in">Sign In</button>
+    </div>
+    <!-- This container includes instructions for the user to sign into the Maitre d application -->
+    <div class="centered-container"> <!-- Additional wrapper for better clarity on styling -->
+        <div class="welcome-container">
+            <h1>Sign Into Your Account</h1>
+            <!-- Form to enter data -->
+            <form id="dataForm">
+                <label for="username">Enter Username:</label>
+                <input type="text" id="username" name="username">
+                <label for="password">Enter Password:</label>
+                <input type="password" id="password" name="password"><br>
+                <button type="submit" class="submit" id="login">Submit</button>
+            </form>
+        </div>
+    </div>
 
-    <!-- Output area for displaying server response -->
+    <!-- Output area for displaying server response CURRENTLY UNUSED -->
     <div id="output"></div>
 
     <script>
         // Function to send data to the server
-     
         async function sendData(username, password) {
             const response = await fetch('http://localhost:8080/login', {
                 method: 'POST',
@@ -34,35 +40,63 @@
                 body: JSON.stringify({ username, password }),
             })
             if(response.status == 200){
-				const token = await response.text()
-				var jwt = JSON.parse(token);
+                const responseData = await response.json();
+                const token = responseData.jwt;
+               
 				localStorage.setItem('user', JSON.stringify(username));
-			    localStorage.setItem('jwt', JSON.stringify(jwt.jwt));
+                localStorage.setItem('jwt', JSON.stringify(token));
 			    redirect();
-	
-				//window.location.replace("http://localhost:8080/customer/home");
+           
             }
 
         }
-        
-       
-		async function redirect(){
+
+        async function redirect() {
 			const token = localStorage.getItem("jwt");
-			const response = await fetch('http://localhost:8080/customer/home', {
-                method: 'GET',
-                headers: {
-                   Authorization: "Bearer " +  JSON.parse(token),
-                },
-                
-            })
-			if(response.status == 200){
-				console.log("success");
-				//window.location.replace("http://localhost:8080/customer/home");
-			}
-			if(response.status == 401){
-			console.log("fail");
-			}
-		}
+            fetch("http://localhost:8080/check-roles?token="+JSON.parse(token))
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("Failed to fetch roles");
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Roles:", data);
+                    data.forEach(role => {
+                        console.log("Role:", role);
+                    });
+                    if (data.includes("CUSTOMER")) {
+                        checkIfAccountExists("customer")
+                            .then(customerExists => {
+                                if (customerExists) {
+                                    performRedirect("/customer/profile", token);
+                                } else {
+                                    performRedirect("/customer/information", token);
+                                }
+                            })
+                            .catch(error => error => {
+                                console.error("Error:", error);
+                            });
+                    } else if (data.includes("RESTAURANT")) {
+                        checkIfAccountExists("restaurant")
+                            .then(restaurantExists => {
+                                if (restaurantExists) {
+                                    performRedirect("/restaurant/profile", token);
+                                } else {
+                                    performRedirect("/restaurant/information", token);
+                                }
+                            })
+                            .catch(error => error => {
+                                console.error("Error:", error);
+                            });
+                    } else {
+                        console.log("No valid route found");
+                    }
+                })
+                .catch(error => {
+                    console.error("Error:", error);
+                });
+        }
 
         // Event listener for form submission
         document.getElementById('dataForm').addEventListener('submit', function(event) {
@@ -70,18 +104,19 @@
             
             // Get user-entered data from the form
             const username = document.getElementById('username').value;
-          //  const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-			
-            const formData = {
-                username: username,
-                //email: email,
-                password: password
-            };
 
             // Send data to the server
             sendData(username, password);
         });
     </script>
+	<!--Website Footer-->
+			<div id="footer-wrapper">
+				<div class="footer-container">
+					Maître d' Application created by Team 3 - Spring 2024
+				</div>
+			</div>
+    <!-- Scripts -->
+    <script src="/js/script.js"></script>
 </body>
 </html>
